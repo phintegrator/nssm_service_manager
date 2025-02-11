@@ -102,12 +102,33 @@ def list_nssm_services():
     except Exception as e:
         print(f"Error listing NSSM services: {str(e)}")
 
+def remove_service(service_name):
+    """Remove a service using nssm.exe."""
+    try:
+        confirmation = input(f"Are you sure you want to remove the service '{service_name}'? (yes/no): ").strip().lower()
+        if confirmation == "yes":
+            result = subprocess.run(
+                ["nssm", "remove", service_name, "confirm"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            if result.returncode == 0:
+                print(f"Service '{service_name}' removed successfully.")
+            else:
+                print(f"Failed to remove service '{service_name}': {result.stderr.strip()}")
+        else:
+            print("Service removal cancelled.")
+    except Exception as e:
+        print(f"Error removing service '{service_name}': {str(e)}")
+
 if __name__ == "__main__":
     print("1. List all services installed using nssm.exe")
-    print("2. Start a service")
-    print("3. Stop a service")
-    print("4. Install a new service using nssm.exe")
-    print("5. Exit")
+    print("2. Install a new service using nssm.exe")
+    print("3. Start a service")
+    print("4. Stop a service")
+    print("5. Remove a service")
+    print("6. Exit")
 
     while True:
         try:
@@ -115,12 +136,6 @@ if __name__ == "__main__":
             if choice == "1":
                 list_nssm_services()
             elif choice == "2":
-                service_name = input("Enter the service name to start: ").strip()
-                subprocess.run(["nssm", "start", service_name])
-            elif choice == "3":
-                service_name = input("Enter the service name to stop: ").strip()
-                subprocess.run(["nssm", "stop", service_name])
-            elif choice == "4":
                 service_name = input("Enter the service name: ").strip()
                 executable_path = input("Enter the executable path: ").strip()
                 startup_directory = input("Enter the startup directory: ").strip()
@@ -131,7 +146,16 @@ if __name__ == "__main__":
                 subprocess.run(install_service_command)
                 subprocess.run(["nssm", "set", service_name, "AppDirectory", startup_directory])
                 print(f"Service '{service_name}' installed successfully.")
+            elif choice == "3":
+                service_name = input("Enter the service name to start: ").strip()
+                subprocess.run(["nssm", "start", service_name])
+            elif choice == "4":
+                service_name = input("Enter the service name to stop: ").strip()
+                subprocess.run(["nssm", "stop", service_name])
             elif choice == "5":
+                service_name = input("Enter the service name to remove: ").strip()
+                remove_service(service_name)
+            elif choice == "6":
                 print("Exiting...")
                 break
             else:
