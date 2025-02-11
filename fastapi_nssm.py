@@ -7,7 +7,6 @@ import uvicorn
 
 app = FastAPI(title="NSSM Service Manager API")
 
-
 # 📌 Request Model for Installing a Service
 class ServiceInstallRequest(BaseModel):
     service_name: str
@@ -15,20 +14,23 @@ class ServiceInstallRequest(BaseModel):
     startup_directory: str
     arguments: Optional[str] = ""
 
+# 📌 Helper Function: Remove Null Characters
+def clean_unicode_string(value: str) -> str:
+    """Removes null characters and trims whitespace."""
+    return value.replace("\u0000", "").strip() if value else "N/A"
 
 # 📌 Get Service Executable Path from Registry
-def get_service_path(service_name):
+def get_service_path(service_name: str) -> str:
     try:
         key_path = fr"SYSTEM\CurrentControlSet\Services\{service_name}"
         with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
             image_path, _ = winreg.QueryValueEx(key, "ImagePath")
-            return image_path.strip('"')
+            return clean_unicode_string(image_path)
     except:
-        return None
-
+        return "N/A"
 
 # 📌 Get Service Status
-def get_service_status(service_name):
+def get_service_status(service_name: str) -> str:
     try:
         result = subprocess.run(
             ["nssm", "status", service_name],
@@ -36,16 +38,16 @@ def get_service_status(service_name):
             stderr=subprocess.PIPE,
             text=True
         )
-        return result.stdout.strip() if result.returncode == 0 else "Unknown"
+        return clean_unicode_string(result.stdout.strip()) if result.returncode == 0 else "Unknown"
     except Exception as e:
         return f"Error: {str(e)}"
 
-
 # 📌 Get Service Details
-def get_service_details(service_name):
+def get_service_details(service_name: str) -> dict:
+    """Retrieve detailed information about a service using NSSM."""
     details = {}
     try:
-        details["Path"] = get_service_path(service_name) or "N/A"
+        details["Path"] = get_service_path(service_name)
 
         result_startup_dir = subprocess.run(
             ["nssm", "get", service_name, "AppDirectory"],
@@ -53,7 +55,7 @@ def get_service_details(service_name):
             stderr=subprocess.PIPE,
             text=True
         )
-        details["Startup Directory"] = result_startup_dir.stdout.strip() if result_startup_dir.returncode == 0 else "N/A"
+        details["Startup Directory"] = clean_unicode_string(result_startup_dir.stdout.strip()) if result_startup_dir.returncode == 0 else "N/A"
 
         result_arguments = subprocess.run(
             ["nssm", "get", service_name, "AppParameters"],
@@ -61,7 +63,7 @@ def get_service_details(service_name):
             stderr=subprocess.PIPE,
             text=True
         )
-        details["Arguments"] = result_arguments.stdout.strip() if result_arguments.returncode == 0 else "N/A"
+        details["Arguments"] = clean_unicode_string(result_arguments.stdout.strip()) if result_arguments.returncode == 0 else "N/A"
 
         details["Status"] = get_service_status(service_name)
 
@@ -69,7 +71,6 @@ def get_service_details(service_name):
         print(f"Error retrieving details for service '{service_name}': {str(e)}")
 
     return details
-
 
 # 📌 List All NSSM Services
 def list_nssm_services():
@@ -85,7 +86,7 @@ def list_nssm_services():
                     nssm_services.append(service_name)
                 i += 1
             except OSError:
-                break
+                break  # No more services
 
         services_details = []
         for service_name in nssm_services:
@@ -99,7 +100,6 @@ def list_nssm_services():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing NSSM services: {str(e)}")
 
-
 # 📌 API Route: List All Services
 @app.get("/services", summary="List all NSSM services")
 def get_services():
@@ -107,7 +107,6 @@ def get_services():
     if not services:
         raise HTTPException(status_code=404, detail="No NSSM services found")
     return {"services": services}
-
 
 # 📌 API Route: Install a New Service
 @app.post("/services", summary="Install a new NSSM service")
@@ -123,7 +122,6 @@ def install_service(request: ServiceInstallRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error installing service: {str(e)}")
 
-
 # 📌 API Route: Start a Service
 @app.post("/services/{service_name}/start", summary="Start a service")
 def start_service(service_name: str):
@@ -135,7 +133,6 @@ def start_service(service_name: str):
             raise HTTPException(status_code=500, detail=result.stderr.strip())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error starting service: {str(e)}")
-
 
 # 📌 API Route: Stop a Service
 @app.post("/services/{service_name}/stop", summary="Stop a service")
@@ -149,7 +146,6 @@ def stop_service(service_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error stopping service: {str(e)}")
 
-
 # 📌 API Route: Remove a Service
 @app.delete("/services/{service_name}", summary="Remove a service")
 def remove_service(service_name: str):
@@ -161,7 +157,6 @@ def remove_service(service_name: str):
             raise HTTPException(status_code=500, detail=result.stderr.strip())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error removing service: {str(e)}")
-
 
 # 📌 Integrated Uvicorn in __main__
 if __name__ == "__main__":
