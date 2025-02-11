@@ -122,17 +122,25 @@ def remove_service(service_name):
     except Exception as e:
         print(f"Error removing service '{service_name}': {str(e)}")
 
-if __name__ == "__main__":
+def show_menu():
+    """Display the menu options."""
+    print("\n=====================================")
+    print(" NSSM Service Manager")
+    print("=====================================")
     print("1. List all services installed using nssm.exe")
     print("2. Install a new service using nssm.exe")
     print("3. Start a service")
     print("4. Stop a service")
     print("5. Remove a service")
     print("6. Exit")
+    print("=====================================")
 
+if __name__ == "__main__":
     while True:
         try:
-            choice = input("\nEnter your choice: ").strip()
+            show_menu()  # Always show the menu before prompting for input
+            choice = input("Enter your choice: ").strip()
+            
             if choice == "1":
                 list_nssm_services()
             elif choice == "2":
