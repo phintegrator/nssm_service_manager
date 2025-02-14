@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import winreg
 import subprocess
 from typing import Optional
@@ -6,6 +7,15 @@ from pydantic import BaseModel
 import uvicorn
 
 app = FastAPI(title="NSSM Service Manager API")
+
+# ✅ Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change this to a specific domain in production
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
 
 # 📌 Request Model for Installing a Service
 class ServiceInstallRequest(BaseModel):
