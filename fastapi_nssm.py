@@ -160,5 +160,5 @@ def remove_service(service_name: str):
 
 # 📌 Integrated Uvicorn in __main__
 if __name__ == "__main__":
-    print("\n🚀 Starting NSSM Service Manager API on http://127.0.0.1:8000/")
+    print("\n🚀 Starting NSSM Service Manager API on http://127.0.0.1:54321/")
     uvicorn.run(app, host="0.0.0.0", port=54321)
