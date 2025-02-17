@@ -57,7 +57,15 @@ def get_service_details(service_name: str) -> dict:
     """Retrieve detailed information about a service using NSSM."""
     details = {}
     try:
-        details["Path"] = get_service_path(service_name)
+        # details["Path"] = get_service_path(service_name)
+
+        result_startup_dir = subprocess.run(
+            ["nssm", "get", service_name, "Application"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        details["Path"] = clean_unicode_string(result_startup_dir.stdout.strip()) if result_startup_dir.returncode == 0 else "N/A"
 
         result_startup_dir = subprocess.run(
             ["nssm", "get", service_name, "AppDirectory"],
