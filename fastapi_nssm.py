@@ -24,6 +24,12 @@ class ServiceInstallRequest(BaseModel):
     startup_directory: str
     arguments: Optional[str] = ""
 
+# 📌 Request Model for Updating a Service
+class ServiceUpdateRequest(BaseModel):
+    executable_path: Optional[str] = None
+    startup_directory: Optional[str] = None
+    arguments: Optional[str] = None
+
 # 📌 Helper Function: Remove Null Characters
 def clean_unicode_string(value: str) -> str:
     """Removes null characters and trims whitespace."""
@@ -139,6 +145,33 @@ def install_service(request: ServiceInstallRequest):
         return {"message": f"Service '{request.service_name}' installed successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error installing service: {str(e)}")
+
+# 📌 API Route: Update an Existing Service
+@app.patch("/services/{service_name}", summary="Update an existing NSSM service")
+def update_service(service_name: str, request: ServiceUpdateRequest):
+    try:
+        # Validate service exists
+        check = subprocess.run(
+            ["nssm", "get", service_name, "Application"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if check.returncode != 0:
+            raise HTTPException(status_code=404, detail=f"Service '{service_name}' not found")
+
+        if request.executable_path is not None:
+            subprocess.run(["nssm", "set", service_name, "Application", request.executable_path])
+        if request.startup_directory is not None:
+            subprocess.run(["nssm", "set", service_name, "AppDirectory", request.startup_directory])
+        if request.arguments is not None:
+            subprocess.run(["nssm", "set", service_name, "AppParameters", request.arguments])
+
+        return {"service_name": service_name, **get_service_details(service_name)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating service: {str(e)}")
 
 # 📌 API Route: Start a Service
 @app.post("/services/{service_name}/start", summary="Start a service")
