@@ -122,6 +122,39 @@ def remove_service(service_name):
     except Exception as e:
         print(f"Error removing service '{service_name}': {str(e)}")
 
+def edit_service():
+    """Edit an existing service using nssm.exe."""
+    try:
+        service_name = input("Enter the service name to edit: ").strip()
+        # Validate service exists
+        check = subprocess.run(
+            ["nssm", "get", service_name, "Application"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if check.returncode != 0:
+            print(f"Service '{service_name}' not found.")
+            return
+
+        new_executable = input("Enter new executable path (leave blank to keep current): ").strip()
+        new_directory = input("Enter new startup directory (leave blank to keep current): ").strip()
+        new_arguments = input("Enter new arguments (leave blank to keep current): ").strip()
+
+        if new_executable:
+            subprocess.run(["nssm", "set", service_name, "Application", new_executable])
+        if new_directory:
+            subprocess.run(["nssm", "set", service_name, "AppDirectory", new_directory])
+        if new_arguments:
+            subprocess.run(["nssm", "set", service_name, "AppParameters", new_arguments])
+
+        details = get_service_details(service_name)
+        print(f"\nUpdated service '{service_name}':")
+        for key, value in details.items():
+            print(f"  {key}: {value}")
+    except Exception as e:
+        print(f"Error editing service '{service_name}': {str(e)}")
+
 def show_menu():
     """Display the menu options."""
     print("\n=====================================")
@@ -132,7 +165,8 @@ def show_menu():
     print("3. Start a service")
     print("4. Stop a service")
     print("5. Remove a service")
-    print("6. Exit")
+    print("6. Edit a service")
+    print("7. Exit")
     print("=====================================")
 
 if __name__ == "__main__":
@@ -164,6 +198,8 @@ if __name__ == "__main__":
                 service_name = input("Enter the service name to remove: ").strip()
                 remove_service(service_name)
             elif choice == "6":
+                edit_service()
+            elif choice == "7":
                 print("Exiting...")
                 break
             else:

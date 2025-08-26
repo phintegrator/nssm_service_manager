@@ -14,9 +14,10 @@ This API **exposes service installation, modification, and execution via a web i
 
 - List all NSSM-installed services.  
 - Retrieve service details (executable path, startup directory, arguments, and status).  
-- Install a new Windows service using NSSM.  
-- Start and stop NSSM services.  
-- Remove services.  
+- Install a new Windows service using NSSM.
+- Start and stop NSSM services.
+- Remove services.
+- Edit existing services.
 
 ## 🛠 Requirements  
 
@@ -61,6 +62,7 @@ By default, the server runs on `http://127.0.0.1:54321/`.
 |---------|----------------------------------|------------------------------|
 | `GET`   | `/services`                      | List all NSSM-managed services |
 | `POST`  | `/services`                      | Install a new service       |
+| `PATCH` | `/services/{service_name}`       | Edit service settings       |
 | `POST`  | `/services/{service_name}/start` | Start a service             |
 | `POST`  | `/services/{service_name}/stop`  | Stop a service              |
 | `DELETE`| `/services/{service_name}`       | Remove a service            |
@@ -94,10 +96,29 @@ curl -X POST "http://127.0.0.1:54321/services/MyService/start"
 curl -X POST "http://127.0.0.1:54321/services/MyService/stop"
 ```  
 
-#### ✅ Remove a service  
+#### ✅ Remove a service
 ```sh
 curl -X DELETE "http://127.0.0.1:54321/services/MyService"
-```  
+```
+
+#### ✅ Edit an existing service
+```sh
+curl -X PATCH "http://127.0.0.1:54321/services/MyService" \
+-H "Content-Type: application/json" \
+-d '{
+  "executable_path": "C:\\newpath\\app.exe",
+  "startup_directory": "C:\\newpath",
+  "arguments": "--debug"
+}'
+```
+
+### CLI Tool
+
+Run the interactive CLI:
+```sh
+python py_nssm.py
+```
+Choose **"Edit a service"** from the menu and follow the prompts to update an existing service.
 
 ## ⚠️ Notes  
 - This API **requires administrator privileges** to modify services.  
