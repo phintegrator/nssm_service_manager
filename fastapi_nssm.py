@@ -26,6 +26,16 @@ class ServiceInstallRequest(BaseModel):
     arguments: Optional[str] = ""
 
 
+class LogPathRequest(BaseModel):
+    path: str
+
+
+class LogRotationRequest(BaseModel):
+    enabled: bool
+    rotate_bytes: Optional[int] = None
+    rotate_files: Optional[int] = None
+
+
 # 📌 Helper Function: Remove Null Characters
 def clean_unicode_string(value: str) -> str:
     """Removes null characters and trims whitespace."""
@@ -329,6 +339,132 @@ def restart_service(service_name: str):
 def service_exists(service_name: str):
     exists = is_nssm_service(service_name)
     return {"service_name": service_name, "exists": exists}
+
+
+def nssm_get(service_name: str, parameter: str) -> str:
+    result = subprocess.run(
+        ["nssm", "get", service_name, parameter],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get {parameter}: {result.stderr.strip()}",
+        )
+    return clean_unicode_string(result.stdout.strip())
+
+
+def nssm_set(service_name: str, parameter: str, value: str):
+    result = subprocess.run(
+        ["nssm", "set", service_name, parameter, value],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to set {parameter}: {result.stderr.strip()}",
+        )
+
+
+# 📌 API Route: Get Stdout Log Path
+@app.get(
+    "/services/{service_name}/logs/stdout",
+    summary="Get stdout log path",
+)
+def get_stdout_log(service_name: str):
+    if not is_nssm_service(service_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Service '{service_name}' not found or not managed by NSSM.",
+        )
+    path = nssm_get(service_name, "AppStdout")
+    return {"service_name": service_name, "stdout_log": path}
+
+
+# 📌 API Route: Set Stdout Log Path
+@app.put(
+    "/services/{service_name}/logs/stdout",
+    summary="Set stdout log path",
+)
+def set_stdout_log(service_name: str, request: LogPathRequest):
+    if not is_nssm_service(service_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Service '{service_name}' not found or not managed by NSSM.",
+        )
+    nssm_set(service_name, "AppStdout", request.path)
+    return {
+        "service_name": service_name,
+        "message": f"Stdout log path set to '{request.path}'.",
+    }
+
+
+# 📌 API Route: Get Stderr Log Path
+@app.get(
+    "/services/{service_name}/logs/stderr",
+    summary="Get stderr log path",
+)
+def get_stderr_log(service_name: str):
+    if not is_nssm_service(service_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Service '{service_name}' not found or not managed by NSSM.",
+        )
+    path = nssm_get(service_name, "AppStderr")
+    return {"service_name": service_name, "stderr_log": path}
+
+
+# 📌 API Route: Set Stderr Log Path
+@app.put(
+    "/services/{service_name}/logs/stderr",
+    summary="Set stderr log path",
+)
+def set_stderr_log(service_name: str, request: LogPathRequest):
+    if not is_nssm_service(service_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Service '{service_name}' not found or not managed by NSSM.",
+        )
+    nssm_set(service_name, "AppStderr", request.path)
+    return {
+        "service_name": service_name,
+        "message": f"Stderr log path set to '{request.path}'.",
+    }
+
+
+# 📌 API Route: Configure Log Rotation
+@app.put(
+    "/services/{service_name}/logs/rotation",
+    summary="Configure log rotation",
+)
+def set_log_rotation(service_name: str, request: LogRotationRequest):
+    if not is_nssm_service(service_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Service '{service_name}' not found or not managed by NSSM.",
+        )
+
+    nssm_set(service_name, "AppRotateFiles", "1" if request.enabled else "0")
+
+    if request.enabled:
+        if request.rotate_bytes is not None:
+            nssm_set(service_name, "AppRotateBytes", str(request.rotate_bytes))
+        if request.rotate_files is not None:
+            nssm_set(service_name, "AppRotateFilesOnline", "1")
+
+    return {
+        "service_name": service_name,
+        "message": "Log rotation configured successfully.",
+        "rotation": {
+            "enabled": request.enabled,
+            "rotate_bytes": request.rotate_bytes,
+            "rotate_files": request.rotate_files,
+        },
+    }
 
 
 # 📌 Integrated Uvicorn in __main__
