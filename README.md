@@ -2,7 +2,7 @@
 
 ![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-blue)  
 
-A FastAPI-based RESTful API to manage Windows services installed via **NSSM (Non-Sucking Service Manager)**. This API allows listing, installing, starting, stopping, and removing NSSM-managed services.  
+A FastAPI-based RESTful API to manage Windows services installed via **NSSM (Non-Sucking Service Manager)**. This API allows listing, installing, starting, stopping, restarting, and removing NSSM-managed services.  
 
 ## ⚠️ WARNING: USE AT YOUR OWN RISK ⚠️  
 This API **exposes service installation, modification, and execution via a web interface**. **DO NOT USE** this if you **do not fully understand the security risks** involved.  
@@ -14,9 +14,12 @@ This API **exposes service installation, modification, and execution via a web i
 
 - List all NSSM-installed services.  
 - Retrieve service details (executable path, startup directory, arguments, and status).  
+- Get status of a single service.  
+- Check if a service exists.  
 - Install a new Windows service using NSSM.  
-- Start and stop NSSM services.  
+- Start, stop, and restart NSSM services.  
 - Remove services.  
+- Health check endpoint.
 
 ## 🛠 Requirements  
 
@@ -57,19 +60,44 @@ By default, the server runs on `http://127.0.0.1:54321/`.
 
 ### API Endpoints  
 
-| Method  | Endpoint                         | Description                  |
-|---------|----------------------------------|------------------------------|
-| `GET`   | `/services`                      | List all NSSM-managed services |
-| `POST`  | `/services`                      | Install a new service       |
-| `POST`  | `/services/{service_name}/start` | Start a service             |
-| `POST`  | `/services/{service_name}/stop`  | Stop a service              |
-| `DELETE`| `/services/{service_name}`       | Remove a service            |
+| Method   | Endpoint                            | Description                      |
+|----------|-------------------------------------|----------------------------------|
+| `GET`    | `/health`                           | Health check                     |
+| `GET`    | `/services`                         | List all NSSM-managed services   |
+| `GET`    | `/services/{service_name}`          | Get details of a specific service|
+| `GET`    | `/services/{service_name}/status`   | Get status of a service          |
+| `GET`    | `/services/{service_name}/exists`   | Check if a service exists        |
+| `POST`   | `/services`                         | Install a new service            |
+| `POST`   | `/services/{service_name}/start`    | Start a service                  |
+| `POST`   | `/services/{service_name}/stop`     | Stop a service                   |
+| `POST`   | `/services/{service_name}/restart`  | Restart a service                |
+| `DELETE` | `/services/{service_name}`          | Remove a service                 |
 
 ### Example API Calls  
+
+#### ✅ Health check  
+```sh
+curl -X GET "http://127.0.0.1:54321/health"
+```  
 
 #### ✅ List all NSSM services  
 ```sh
 curl -X GET "http://127.0.0.1:54321/services" -H "accept: application/json"
+```  
+
+#### ✅ Get details of a specific service  
+```sh
+curl -X GET "http://127.0.0.1:54321/services/MyService"
+```  
+
+#### ✅ Get status of a service  
+```sh
+curl -X GET "http://127.0.0.1:54321/services/MyService/status"
+```  
+
+#### ✅ Check if a service exists  
+```sh
+curl -X GET "http://127.0.0.1:54321/services/MyService/exists"
 ```  
 
 #### ✅ Install a new NSSM service  
@@ -92,6 +120,11 @@ curl -X POST "http://127.0.0.1:54321/services/MyService/start"
 #### ✅ Stop a service  
 ```sh
 curl -X POST "http://127.0.0.1:54321/services/MyService/stop"
+```  
+
+#### ✅ Restart a service  
+```sh
+curl -X POST "http://127.0.0.1:54321/services/MyService/restart"
 ```  
 
 #### ✅ Remove a service  
