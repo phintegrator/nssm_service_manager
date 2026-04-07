@@ -20,6 +20,7 @@ This API **exposes service installation, modification, and execution via a web i
 - Start, stop, and restart NSSM services.  
 - Remove services.  
 - Health check endpoint.
+- Configure stdout/stderr log paths and log rotation.
 
 ## 🛠 Requirements  
 
@@ -72,6 +73,11 @@ By default, the server runs on `http://127.0.0.1:54321/`.
 | `POST`   | `/services/{service_name}/stop`     | Stop a service                   |
 | `POST`   | `/services/{service_name}/restart`  | Restart a service                |
 | `DELETE` | `/services/{service_name}`          | Remove a service                 |
+| `GET`    | `/services/{service_name}/logs/stdout`  | Get stdout log path          |
+| `PUT`    | `/services/{service_name}/logs/stdout`  | Set stdout log path          |
+| `GET`    | `/services/{service_name}/logs/stderr`  | Get stderr log path          |
+| `PUT`    | `/services/{service_name}/logs/stderr`  | Set stderr log path          |
+| `PUT`    | `/services/{service_name}/logs/rotation`| Configure log rotation       |
 
 ### Example API Calls  
 
@@ -131,6 +137,37 @@ curl -X POST "http://127.0.0.1:54321/services/MyService/restart"
 ```sh
 curl -X DELETE "http://127.0.0.1:54321/services/MyService"
 ```  
+
+#### ✅ Get stdout log path  
+```sh
+curl -X GET "http://127.0.0.1:54321/services/MyService/logs/stdout"
+```  
+
+#### ✅ Set stdout log path  
+```sh
+curl -X PUT "http://127.0.0.1:54321/services/MyService/logs/stdout" \
+-H "Content-Type: application/json" \
+-d '{"path": "C:\\logs\\MyService_stdout.log"}'
+```  
+
+#### ✅ Get stderr log path  
+```sh
+curl -X GET "http://127.0.0.1:54321/services/MyService/logs/stderr"
+```  
+
+#### ✅ Set stderr log path  
+```sh
+curl -X PUT "http://127.0.0.1:54321/services/MyService/logs/stderr" \
+-H "Content-Type: application/json" \
+-d '{"path": "C:\\logs\\MyService_stderr.log"}'
+```  
+
+#### ✅ Configure log rotation  
+```sh
+curl -X PUT "http://127.0.0.1:54321/services/MyService/logs/rotation" \
+-H "Content-Type: application/json" \
+-d '{"enabled": true, "rotate_bytes": 1048576, "rotate_files": 5}'
+```
 
 ## ⚠️ Notes  
 - This API **requires administrator privileges** to modify services.  
