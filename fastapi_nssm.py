@@ -6,7 +6,7 @@ from typing import Optional
 from pydantic import BaseModel
 import uvicorn
 
-app = FastAPI(title="NSSM Service Manager API")
+app = FastAPI(title="NSSM Service Manager API", version="1.1.0")
 
 # ✅ Enable CORS
 app.add_middleware(
@@ -144,6 +144,22 @@ def list_nssm_services():
         )
 
 
+def is_nssm_service(service_name: str) -> bool:
+    try:
+        key_path = rf"SYSTEM\CurrentControlSet\Services\{service_name}"
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+            image_path, _ = winreg.QueryValueEx(key, "ImagePath")
+            return "nssm.exe" in image_path.lower()
+    except Exception:
+        return False
+
+
+# 📌 API Route: Health Check
+@app.get("/health", summary="Health check")
+def health_check():
+    return {"status": "healthy", "service": "NSSM Service Manager API"}
+
+
 # 📌 API Route: List All Services
 @app.get("/services", summary="List all NSSM services")
 def get_services():
@@ -246,6 +262,73 @@ def remove_service(service_name: str):
         return {"message": f"Service '{service_name}' removed successfully."}
     else:
         raise HTTPException(status_code=500, detail=result.stderr.strip())
+
+
+# 📌 API Route: Get a Single Service
+@app.get("/services/{service_name}", summary="Get details of a specific service")
+def get_service(service_name: str):
+    if not is_nssm_service(service_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Service '{service_name}' not found or not managed by NSSM.",
+        )
+    details = get_service_details(service_name)
+    return {"service_name": service_name, **details}
+
+
+# 📌 API Route: Get Service Status
+@app.get("/services/{service_name}/status", summary="Get status of a service")
+def get_service_status_endpoint(service_name: str):
+    if not is_nssm_service(service_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Service '{service_name}' not found or not managed by NSSM.",
+        )
+    status = get_service_status(service_name)
+    return {"service_name": service_name, "status": status}
+
+
+# 📌 API Route: Restart a Service
+@app.post("/services/{service_name}/restart", summary="Restart a service")
+def restart_service(service_name: str):
+    if not is_nssm_service(service_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Service '{service_name}' not found or not managed by NSSM.",
+        )
+
+    stop_result = subprocess.run(
+        ["nssm", "stop", service_name],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if stop_result.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to stop service: {stop_result.stderr.strip()}",
+        )
+
+    start_result = subprocess.run(
+        ["nssm", "start", service_name],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if start_result.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Service stopped but failed to start: {start_result.stderr.strip()}",
+        )
+
+    return {"message": f"Service '{service_name}' restarted successfully."}
+
+
+# 📌 API Route: Check if Service Exists
+@app.get("/services/{service_name}/exists", summary="Check if a service exists")
+def service_exists(service_name: str):
+    exists = is_nssm_service(service_name)
+    return {"service_name": service_name, "exists": exists}
 
 
 # 📌 Integrated Uvicorn in __main__
