@@ -2,7 +2,7 @@
 
 ![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-blue)  
 
-A FastAPI-based RESTful API to manage Windows services installed via **NSSM (Non-Sucking Service Manager)**. This API allows listing, installing, starting, stopping, restarting, and removing NSSM-managed services.  
+A FastAPI-based RESTful API to manage Windows services installed via **NSSM (Non-Sucking Service Manager)**. This API allows listing, installing, and starting NSSM-managed services, with optional lifecycle controls based on policy.  
 
 ## ⚠️ WARNING: USE AT YOUR OWN RISK ⚠️  
 This API **exposes service installation, modification, and execution via a web interface**. **DO NOT USE** this if you **do not fully understand the security risks** involved.  
@@ -17,8 +17,8 @@ This API **exposes service installation, modification, and execution via a web i
 - Get status of a single service.  
 - Check if a service exists.  
 - Install a new Windows service using NSSM.  
-- Start, stop, and restart NSSM services.  
-- Remove services.  
+- Start NSSM services.  
+- Policy-based protection to disable stop/restart/remove operations.  
 - Health check endpoint.
 - Configure stdout/stderr log paths and log rotation.
 
@@ -55,7 +55,7 @@ This API **exposes service installation, modification, and execution via a web i
 ### Start the API Server  
 Run the following command to start the API:  
 ```sh
-python nssm_export_service.py
+python nssm_exporter_service.py
 ```  
 By default, the server runs on `http://127.0.0.1:54321/`.  
 
@@ -70,9 +70,9 @@ By default, the server runs on `http://127.0.0.1:54321/`.
 | `GET`    | `/services/{service_name}/exists`   | Check if a service exists        |
 | `POST`   | `/services`                         | Install a new service            |
 | `POST`   | `/services/{service_name}/start`    | Start a service                  |
-| `POST`   | `/services/{service_name}/stop`     | Stop a service                   |
-| `POST`   | `/services/{service_name}/restart`  | Restart a service                |
-| `DELETE` | `/services/{service_name}`          | Remove a service                 |
+| `POST`   | `/services/{service_name}/stop`     | Stop a service (disabled by default) |
+| `POST`   | `/services/{service_name}/restart`  | Restart a service (disabled by default) |
+| `DELETE` | `/services/{service_name}`          | Remove a service (disabled by default) |
 | `GET`    | `/services/{service_name}/logs/stdout`  | Get stdout log path          |
 | `PUT`    | `/services/{service_name}/logs/stdout`  | Set stdout log path          |
 | `GET`    | `/services/{service_name}/logs/stderr`  | Get stderr log path          |
@@ -171,6 +171,9 @@ curl -X PUT "http://127.0.0.1:54321/services/MyService/logs/rotation" \
 
 ## ⚠️ Notes  
 - This API **requires administrator privileges** to modify services.  
+- If you run this API via NSSM, configure the service account with rights to manage Windows services (for example `LocalSystem` or an admin account with `Log on as a service`).  
+- Stop/restart/remove API actions are blocked by default and return `403`.  
+- To allow those actions, set environment variable `NSSM_BLOCK_STOP_DELETE_ACTIONS=false` before starting the API service.  
 - Ensure **NSSM is installed and in your system PATH** before running the API.  
 - NSSM is used for managing long-running services, such as background tasks, web servers, and monitoring tools.  
 

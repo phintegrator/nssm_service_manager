@@ -2,11 +2,17 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import winreg
 import subprocess
+import os
 from typing import Optional
 from pydantic import BaseModel
 import uvicorn
 
 app = FastAPI(title="NSSM Service Manager API", version="1.1.0")
+
+BLOCK_STOP_DELETE_ACTIONS = (
+    os.getenv("NSSM_BLOCK_STOP_DELETE_ACTIONS", "true").strip().lower()
+    not in {"0", "false", "no"}
+)
 
 # ✅ Enable CORS
 app.add_middleware(
@@ -164,6 +170,17 @@ def is_nssm_service(service_name: str) -> bool:
         return False
 
 
+def block_stop_delete_actions(action: str):
+    if BLOCK_STOP_DELETE_ACTIONS:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"'{action}' action is disabled by policy "
+                "(NSSM_BLOCK_STOP_DELETE_ACTIONS=true)."
+            ),
+        )
+
+
 # 📌 API Route: Health Check
 @app.get("/health", summary="Health check")
 def health_check():
@@ -247,6 +264,7 @@ def start_service(service_name: str):
 # 📌 API Route: Stop a Service
 @app.post("/services/{service_name}/stop", summary="Stop a service")
 def stop_service(service_name: str):
+    block_stop_delete_actions("stop")
     result = subprocess.run(
         ["nssm", "stop", service_name],
         stdout=subprocess.PIPE,
@@ -262,6 +280,7 @@ def stop_service(service_name: str):
 # 📌 API Route: Remove a Service
 @app.delete("/services/{service_name}", summary="Remove a service")
 def remove_service(service_name: str):
+    block_stop_delete_actions("remove")
     result = subprocess.run(
         ["nssm", "remove", service_name, "confirm"],
         stdout=subprocess.PIPE,
@@ -301,6 +320,7 @@ def get_service_status_endpoint(service_name: str):
 # 📌 API Route: Restart a Service
 @app.post("/services/{service_name}/restart", summary="Restart a service")
 def restart_service(service_name: str):
+    block_stop_delete_actions("restart")
     if not is_nssm_service(service_name):
         raise HTTPException(
             status_code=404,
