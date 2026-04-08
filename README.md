@@ -55,7 +55,7 @@ This API **exposes service installation, modification, and execution via a web i
 ### Start the API Server  
 Run the following command to start the API:  
 ```sh
-python fastapi_nssm.py
+python nssm_export_service.py
 ```  
 By default, the server runs on `http://127.0.0.1:54321/`.  
 
